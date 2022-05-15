@@ -1,0 +1,82 @@
+{
+    "player0": {
+        "name": "Player0",
+        "id": 1,
+        "isAlive": true
+    },
+    "player1": {
+        "name": "player1",
+        "id": 2,
+        "isAlive": true
+    },
+    "player2": {
+        "name": "player2",
+        "id": 3,
+        "isAlive": true
+    },
+    "player3": {
+        "name": "player3",
+        "id": 4,
+        "isAlive": true
+    },
+    "player4": {
+        "name": "player4",
+        "id": 5,
+        "isAlive": true
+    },
+    "player5": {
+        "name": "player5",
+        "id": 6,
+        "isAlive": true
+    },
+    "player6": {
+        "name": "player6",
+        "id": 7,
+        "isAlive": true
+    },
+    "player7": {
+        "name": "player7",
+        "id": 8,
+        "isAlive": true
+    },
+    "player8": {
+        "name": "player8",
+        "id": 9,
+        "isAlive": true
+    },
+    "player9": {
+        "name": "player9",
+        "id": 10,
+        "isAlive": true
+    },
+    "player10": {
+        "name": "player10",
+        "id": 11,
+        "isAlive": true
+    },
+    "player11": {
+        "name": "player11",
+        "id": 12,
+        "isAlive": true
+    },
+    "player12": {
+        "name": "player12",
+        "id": 13,
+        "isAlive": true
+    },
+    "player13": {
+        "name": "player13",
+        "id": 14,
+        "isAlive": true
+    },
+    "player14": {
+        "name": "player14",
+        "id": 15,
+        "sAlive": true
+    },
+    "player15": {
+        "name": "player15",
+        "id": 16,
+        "isAlive": true
+    }
+}
