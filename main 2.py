@@ -7,28 +7,66 @@ from discord.ext import commands
 from datetime import datetime
 
 
-# Discord Bot's Token
-bot_token = "OTUxNDU2MDYzMjUxNjkzNjE4.Yinugg.qolhys0B1JGNfX53DF3fm8QX6K8"
-
-
 # Bot will get triggered to commands that start with "!"
 bot = commands.Bot(command_prefix='!')
-
-
-# Nested Dictionary to hold list of players that will play the game.
-# Initially it is empty and players.json file must have '{}' to become a dictionary.
-player_list = {}
-
-
-global seconds
-global msg_id
-global is_time_up
 
 
 # Let's us know that bot is ready to work.
 @bot.event
 async def on_ready():
     print('\nSystem_Msg:  Bot is ready to work!')
+
+
+# Play command, it can only run by Moderators.
+@bot.command(name='play', pass_context=True)
+@commands.has_role('Moderator')
+async def on_message(ctx):
+
+    global is_time_up
+    is_time_up = False
+
+    embed = discord.Embed(
+      title='Click to join',
+      description='In order to play the game, you need to join now',
+      color =0xf55951,
+      timestamp=datetime.now()
+    )
+  
+    msg = await ctx.send(embed=embed)
+    set_id(msg.id)
+
+    await msg.add_reaction('✅')
+    await msg.add_reaction('❎')
+    threading.Thread(target = game_count_down).start()
+    await sendEmbedMsg(ctx)
+   
+
+global is_time_up, msg_id
+
+
+# Set how many seconds left globally.
+def set_is_time_up(time_left):
+    global is_time_up
+    is_time_up = time_left
+
+
+# Set message Id of embedded message globally.
+def set_id(id):
+    global msg_id
+    msg_id = id
+
+
+# If user clicks on check mark reaction, we enroll thr user to the game. 
+@bot.event
+async def on_raw_reaction_add(payload):
+    if msg_id == payload.message_id:
+        member = payload.member
+        emoji = payload.emoji.name
+        if member != bot.user:
+            if emoji == '✅':
+                player = Player(member.name, member.id)
+            elif emoji == '❎':
+                print(f'\nSystem_Msg:  {member.name} will not be participating in the game.')
 
 
 # Player object
@@ -74,22 +112,9 @@ def check_and_add_player(selected_player):
         print('\nError_Msg:  Time is Up, user cannot join to the game.')
 
 
-# Set message Id of embedded message globally.
-def set_id(id):
-    global msg_id
-    msg_id = id
-
-
-# Set how many seconds left globally.
-def set_is_time_up(time_left):
-    global is_time_up
-    is_time_up = time_left
-
-
-# Set seconds of embedded message globally.
-def set_seconds(sec):
-    global seconds
-    seconds = sec
+# Nested Dictionary to hold list of players that will play the game.
+# Initially it is empty and players.json file must have '{}' to become a dictionary.
+player_list = {}
 
 
 # Write the player_list nested dictionary to a json file named 'players'.
@@ -102,16 +127,51 @@ def export_players_to_json(player_list):
         print('\nSuccess_Msg:  player_list successfully exported to players.json')
 
 
-# Update the players_list from json at beginning of each round.
-def import_players_from_json():
+# We count down from 2 mins and get players to the pool, then we save them to json.
+def game_count_down():
     
-    # Load json file to check. If file is empty, we must put {} to make it a dictionary.
-    # Or we will get errors because alive_players won't be assigned as dictionary object.
-    with open('players.json') as file:
-        players = json.load(file)
-        print('\nSuccess_Msg:  players imported successfulyy from players.json')
+    global seconds
+    global is_time_up
+    is_time_up = False
 
-    return players
+    # t is seconds that we will count down from.
+    t = 11
+
+    while t > 0:
+       
+        # This converts seconds into mins
+        mins, secs = divmod(t, 60)
+
+        seconds = t
+        set_seconds(seconds)
+
+        # For testing purposes I format it and print it to seconds to console.
+        timer = '{:02d}:{:02d}'.format(mins, secs)
+        print(timer, end="\r")
+
+        # This is how we count down.
+        time.sleep(1)
+        t -= 1
+
+        if t != 0:
+            is_time_up = False
+            set_is_time_up(False)
+
+        # Send an embed that indicates game is starting now!
+        elif t == 0: 
+            #add Dummy Players here!
+            set_is_time_up(True)
+            prepare_players_for_game()
+
+
+# seconds 
+global seconds
+
+
+# Set seconds of embedded message globally.
+def set_seconds(sec):
+    global seconds
+    seconds = sec
 
 
 # Randomly choose players and make a list that only chosen player that will be in.
@@ -145,100 +205,16 @@ def prepare_players_for_game():
     choose_round_players(alive_players, alive_ones)
 
 
-# Update the dead players on the player_list and export it
-def update_players(round_players):
-
-    player_list = import_players_from_json()
-    for player_name, p_isAlive in round_players.items():
-        for key in p_isAlive:
-            if key == 'isAlive':
-                if p_isAlive[key] == False:
-                     print(f'\n {player_name} died')
-                     player_list[player_name] = round_players[player_name]
-                                
-    print('\nSystem_Msg:  Round ended!')
-    print('\nPlayer_list after:', player_list)
-    export_players_to_json(player_list)
-    make_new_round(player_list)
-
-
-# If user clicks on check mark reaction, we enroll thr user to the game. 
-@bot.event
-async def on_raw_reaction_add(payload):
-    if msg_id == payload.message_id:
-        member = payload.member
-        emoji = payload.emoji.name
-        if member != bot.user:
-            if emoji == '✅':
-                player = Player(member.name, member.id)
-            elif emoji == '❎':
-                print(f'\nSystem_Msg:  {member.name} will not be participating in the game.')
-
-
-# Play command, it can only run by Moderators.
-@bot.command(name='play', pass_context=True)
-@commands.has_role('Moderator')
-async def on_message(ctx):
-
-    global is_time_up
-    is_time_up = False
-
-    embed = discord.Embed(
-      title='Click to join',
-      description='In order to play the game, you need to join now',
-      color =0xf55951,
-      timestamp=datetime.now()
-    )
-  
-    msg = await ctx.send(embed=embed)
-    set_id(msg.id)
-
-    await msg.add_reaction('✅')
-    await msg.add_reaction('❎')
-    threading.Thread(target = game_count_down).start()
-    await sendEmbedMsg(ctx)
+# Update the players_list from json at beginning of each round.
+def import_players_from_json():
     
+    # Load json file to check. If file is empty, we must put {} to make it a dictionary.
+    # Or we will get errors because alive_players won't be assigned as dictionary object.
+    with open('players.json') as file:
+        players = json.load(file)
+        print('\nSuccess_Msg:  players imported successfulyy from players.json')
 
-# We count down from 2 mins and get players to the pool, then we save them to json.
-def game_count_down():
-    
-    global seconds
-    global is_time_up
-    is_time_up = False
-
-
-    # t is seconds that we will count down from.
-    t = 11
-
-    while t > 0:
-       
-        # This converts seconds into mins
-        mins, secs = divmod(t, 60)
-
-        seconds = t
-        set_seconds(seconds)
-
-        # For testing purposes I format it and print it to seconds to console.
-        timer = '{:02d}:{:02d}'.format(mins, secs)
-        print(timer, end="\r")
-
-        # This is how we count down.
-        time.sleep(1)
-        t -= 1
-
-        if t != 0:
-            is_time_up = False
-            set_is_time_up(False)
-
-        # Send an embed that indicates game is starting now!
-        elif t == 0: 
-            #add Dummy Players here!
-            set_is_time_up(True)
-            prepare_players_for_game()
-
-
-# DONE TILL HERE
-# *****************************************************************
+    return players
 
 
 # Randomly Chooses round players from Alive Players list. 
@@ -254,16 +230,20 @@ def choose_round_players(alive_players, alive_ones):
 
     # Picking 4 players from alive_ones and adding them to round_players.
     for i in range(0, 5):
+
         # -1 because arrays start from 0.
         rand_num = random.randint(0, len(alive_ones) - 1)
+
         # alive_ones[0] is 'osman', so the key
         key = alive_ones[rand_num]
+
         # round_players['osman'] = alive_ones['osman']
         round_players[key] = alive_players[key]
+        
         # Now we added them to array with their keys(names).
         playing_ones.append(key)
 
-    play_round
+    play_round()
     print('\nSystem_Msg:  playing ones array: ', playing_ones)
     (round_players, playing_ones)  
 
@@ -286,6 +266,56 @@ def play_round(round_players, playing_ones):
 
     update_players(round_players)
 
+
+# Update the dead players on the player_list and export it
+def update_players(round_players):
+
+    player_list = import_players_from_json()
+    for player_name, p_isAlive in round_players.items():
+        for key in p_isAlive:
+            if key == 'isAlive':
+                if p_isAlive[key] == False:
+                     print(f'\n {player_name} died')
+                     player_list[player_name] = round_players[player_name]
+                                
+    print('\nSystem_Msg:  Round ended!')
+    print('\nPlayer_list after:', player_list)
+    export_players_to_json(player_list)
+    make_new_round(player_list)
+
+
+# IMPLEMENT IT
+def make_new_round(player_list):
+    # send round results with migration scenarios.
+    # check alive ones
+    # check for the last round. 
+    # calculate_round_count(initial_list)
+    # choose round players according to est. round count and player count
+    # play round
+    # Implement game finished and publish winner.
+    x = 5
+
+
+# Calculate how many rounds there will be according to player.
+def calculate_round_count(initial_list):
+    # calculate an est. value according to the player count
+
+    round_count = -1
+    player_count = len(initial_list) 
+
+    #BURDAN DEVAM ET
+    #round_count = 
+
+    # if player_count > 20:
+    #    round_count = 10
+    # elif player_count > 10:
+    #    round_count = 5
+    # elif player_count > 5:
+    #    round_count = 2
+    
+    print(f'\nSystem_Msg:  There will be {round_count} rounds.')
+    return round_count
+    
 
 # send embeded messages according to time left for the game.
 async def sendEmbedMsg(ctx):
@@ -315,44 +345,8 @@ async def sendEmbedMsg(ctx):
             await ctx.channel.send(embed=embedVar)
 
 
-# MUST BE ADJUSTED TILL HERE
-# *****************************************************************
-
-
-# Calculate how many rounds there will be according to player.
-def calculate_round_count(initial_list):
-    # calculate an est. value according to the player count
-
-    round_count = -1
-    player_count = len(initial_list) 
-
-    #BURDAN DEVAM ET
-    #round_count = 
-
-    # if player_count > 20:
-    #    round_count = 10
-    # elif player_count > 10:
-    #    round_count = 5
-    # elif player_count > 5:
-    #    round_count = 2
-    
-    print(f'\nSystem_Msg:  There will be {round_count} rounds.')
-    return round_count
-
-
-# IMPLEMENT IT
-def make_new_round(player_list):
-    # send round results with migration scenarios.
-    # check alive ones
-    # check for the last round.
-    # choose round players according to est. round count and player count
-    # play round
-    # Implement game finished and publish winner.
-    x = 5
-    
-
-# MUST BE IMPLEMENTED TILL HERE
-# *****************************************************************
+# Discord Bot's Token
+bot_token = "OTUxNDU2MDYzMjUxNjkzNjE4.Yinugg.qolhys0B1JGNfX53DF3fm8QX6K8"
 
 
 # To run the bot and make it online.
@@ -363,11 +357,5 @@ bot.run(bot_token)
 1-) Check if the alive_ones array is empty or not in play_round()
 2-) Hide Bot Token --> line 11
 3-) Make it online 7/24 and try/kill snippet from Berke.
-4-) 
-5-) 
-6-) 
-7-) 
-8-) 
-9-) choose 5 ppl ever round and make round count according to player count
-10-) 
+4-) choose 5 ppl ever round and make round count according to player count
 """
